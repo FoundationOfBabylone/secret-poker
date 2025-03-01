@@ -1,0 +1,358 @@
+{
+  "height": 9316347,
+  "timestamp": "2025-02-28T13:02:36Z",
+  "transactionHash": "0710A6AD4F6B14624853C3AC8D1CF3E716C99486F6DB79CD7A335B414CBADAA9",
+  "code": 0,
+  "codespace": "",
+  "info": "",
+  "tx": {
+    "@type": "/cosmos.tx.v1beta1.Tx",
+    "body": {
+      "messages": [
+        {
+          "@type": "/secret.compute.v1beta1.MsgExecuteContract",
+          "sender": "secret16h9597w68zrs902mtdd3wcrqwdw6r223pxgue3",
+          "contract": "secret1aate40xj06ae9vlegccp6803h56f8apkpj3jjq",
+          "msg": {
+            "start_game": {
+              "table_id": 999,
+              "hand_ref": 1,
+              "players": [
+                {
+                  "username": "player2",
+                  "player_id": "3c835440-62b4-4750-946c-f0e622f5cd57",
+                  "public_key": "secret16h9597w68zrs902mtdd3wcrqwdw6r223pxgue3"
+                },
+                {
+                  "username": "player3",
+                  "player_id": "3327ec7f-504e-4283-950a-47d602130d2e",
+                  "public_key": "secret1xywlcys0sgvvjf60mtvvu63np9sr9qj9msf947"
+                }
+              ],
+              "prev_hand_showdown_players": []
+            }
+          },
+          "callback_code_hash": "",
+          "sent_funds": [],
+          "callback_sig": null
+        }
+      ],
+      "memo": "",
+      "timeout_height": "0",
+      "extension_options": [],
+      "non_critical_extension_options": []
+    },
+    "auth_info": {
+      "signer_infos": [
+        {
+          "public_key": {
+            "@type": "/cosmos.crypto.secp256k1.PubKey",
+            "key": "A92WgRgrkT56ma8iZZdYcfxWNwi3WZV8V/Rk9eS1jI8L"
+          },
+          "mode_info": {
+            "single": {
+              "mode": "SIGN_MODE_DIRECT"
+            }
+          },
+          "sequence": "230"
+        }
+      ],
+      "fee": {
+        "amount": [
+          {
+            "denom": "uscrt",
+            "amount": "5000"
+          }
+        ],
+        "gas_limit": "50000",
+        "payer": "",
+        "granter": ""
+      },
+      "tip": null
+    },
+    "signatures": [
+      "0iq+DvGnwMOHmv0XKVP2w7tCjyJm0APeg/NJb3/px2onDdgSUv41rF4UYK/ocfuk74fUlSY1UIr+VnruiKCDgg=="
+    ]
+  },
+  "rawLog": "",
+  "jsonLog": [
+    {
+      "msg_index": 0,
+      "events": [
+        {
+          "type": "message",
+          "attributes": [
+            {
+              "key": "action",
+              "value": "/secret.compute.v1beta1.MsgExecuteContract"
+            },
+            {
+              "key": "sender",
+              "value": "secret16h9597w68zrs902mtdd3wcrqwdw6r223pxgue3"
+            },
+            {
+              "key": "module",
+              "value": "compute"
+            },
+            {
+              "key": "contract_address",
+              "value": "secret1aate40xj06ae9vlegccp6803h56f8apkpj3jjq"
+            }
+          ]
+        },
+        {
+          "type": "execute",
+          "attributes": [
+            {
+              "key": "contract_address",
+              "value": "secret1aate40xj06ae9vlegccp6803h56f8apkpj3jjq"
+            }
+          ]
+        },
+        {
+          "type": "wasm",
+          "attributes": [
+            {
+              "key": "contract_address",
+              "value": "secret1aate40xj06ae9vlegccp6803h56f8apkpj3jjq"
+            },
+            {
+              "key": "response",
+              "value": "{\"type\":\"start_game\",\"table_id\":999,\"hand_ref\":1,\"players\":[\"player2\",\"player3\"]}"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "arrayLog": [
+    {
+      "msg": 0,
+      "type": "message",
+      "key": "action",
+      "value": "/secret.compute.v1beta1.MsgExecuteContract"
+    },
+    {
+      "msg": 0,
+      "type": "message",
+      "key": "sender",
+      "value": "secret16h9597w68zrs902mtdd3wcrqwdw6r223pxgue3"
+    },
+    {
+      "msg": 0,
+      "type": "message",
+      "key": "module",
+      "value": "compute"
+    },
+    {
+      "msg": 0,
+      "type": "message",
+      "key": "contract_address",
+      "value": "secret1aate40xj06ae9vlegccp6803h56f8apkpj3jjq"
+    },
+    {
+      "msg": 0,
+      "type": "execute",
+      "key": "contract_address",
+      "value": "secret1aate40xj06ae9vlegccp6803h56f8apkpj3jjq"
+    },
+    {
+      "msg": 0,
+      "type": "wasm",
+      "key": "contract_address",
+      "value": "secret1aate40xj06ae9vlegccp6803h56f8apkpj3jjq"
+    },
+    {
+      "msg": 0,
+      "type": "wasm",
+      "key": "response",
+      "value": "{\"type\":\"start_game\",\"table_id\":999,\"hand_ref\":1,\"players\":[\"player2\",\"player3\"]}"
+    }
+  ],
+  "events": [
+    {
+      "type": "coin_spent",
+      "attributes": [
+        {
+          "key": "spender",
+          "value": "secret16h9597w68zrs902mtdd3wcrqwdw6r223pxgue3",
+          "index": true
+        },
+        {
+          "key": "amount",
+          "value": "5000uscrt",
+          "index": true
+        }
+      ]
+    },
+    {
+      "type": "coin_received",
+      "attributes": [
+        {
+          "key": "receiver",
+          "value": "secret17xpfvakm2amg962yls6f84z3kell8c5ljuhfkp",
+          "index": true
+        },
+        {
+          "key": "amount",
+          "value": "5000uscrt",
+          "index": true
+        }
+      ]
+    },
+    {
+      "type": "transfer",
+      "attributes": [
+        {
+          "key": "recipient",
+          "value": "secret17xpfvakm2amg962yls6f84z3kell8c5ljuhfkp",
+          "index": true
+        },
+        {
+          "key": "sender",
+          "value": "secret16h9597w68zrs902mtdd3wcrqwdw6r223pxgue3",
+          "index": true
+        },
+        {
+          "key": "amount",
+          "value": "5000uscrt",
+          "index": true
+        }
+      ]
+    },
+    {
+      "type": "message",
+      "attributes": [
+        {
+          "key": "sender",
+          "value": "secret16h9597w68zrs902mtdd3wcrqwdw6r223pxgue3",
+          "index": true
+        }
+      ]
+    },
+    {
+      "type": "tx",
+      "attributes": [
+        {
+          "key": "fee",
+          "value": "5000uscrt",
+          "index": true
+        },
+        {
+          "key": "fee_payer",
+          "value": "secret16h9597w68zrs902mtdd3wcrqwdw6r223pxgue3",
+          "index": true
+        }
+      ]
+    },
+    {
+      "type": "tx",
+      "attributes": [
+        {
+          "key": "acc_seq",
+          "value": "secret16h9597w68zrs902mtdd3wcrqwdw6r223pxgue3/230",
+          "index": true
+        }
+      ]
+    },
+    {
+      "type": "tx",
+      "attributes": [
+        {
+          "key": "signature",
+          "value": "0iq+DvGnwMOHmv0XKVP2w7tCjyJm0APeg/NJb3/px2onDdgSUv41rF4UYK/ocfuk74fUlSY1UIr+VnruiKCDgg==",
+          "index": true
+        }
+      ]
+    },
+    {
+      "type": "message",
+      "attributes": [
+        {
+          "key": "action",
+          "value": "/secret.compute.v1beta1.MsgExecuteContract",
+          "index": true
+        },
+        {
+          "key": "sender",
+          "value": "secret16h9597w68zrs902mtdd3wcrqwdw6r223pxgue3",
+          "index": true
+        },
+        {
+          "key": "msg_index",
+          "value": "0",
+          "index": true
+        }
+      ]
+    },
+    {
+      "type": "message",
+      "attributes": [
+        {
+          "key": "module",
+          "value": "compute",
+          "index": true
+        },
+        {
+          "key": "sender",
+          "value": "secret16h9597w68zrs902mtdd3wcrqwdw6r223pxgue3",
+          "index": true
+        },
+        {
+          "key": "contract_address",
+          "value": "secret1aate40xj06ae9vlegccp6803h56f8apkpj3jjq",
+          "index": true
+        },
+        {
+          "key": "msg_index",
+          "value": "0",
+          "index": true
+        }
+      ]
+    },
+    {
+      "type": "execute",
+      "attributes": [
+        {
+          "key": "contract_address",
+          "value": "secret1aate40xj06ae9vlegccp6803h56f8apkpj3jjq",
+          "index": true
+        },
+        {
+          "key": "msg_index",
+          "value": "0",
+          "index": true
+        }
+      ]
+    },
+    {
+      "type": "wasm",
+      "attributes": [
+        {
+          "key": "contract_address",
+          "value": "secret1aate40xj06ae9vlegccp6803h56f8apkpj3jjq",
+          "index": true
+        },
+        {
+          "key": "response",
+          "value": "{\"type\":\"start_game\",\"table_id\":999,\"hand_ref\":1,\"players\":[\"player2\",\"player3\"]}",
+          "index": true
+        },
+        {
+          "key": "msg_index",
+          "value": "0",
+          "index": true
+        }
+      ]
+    }
+  ],
+  "data": [
+    {
+      "type": "Buffer",
+      "data": []
+    }
+  ],
+  "gasUsed": 44859,
+  "gasWanted": 50000,
+  "ibcResponses": []
+}
