@@ -1,0 +1,45 @@
+[package]
+name = "poker_cards_distributor"
+version = "1.0.0"
+authors = ["Babylone Foundation"]
+edition = "2021"
+description = "The Poker cards distributor contract"
+license = "Apache-2.0"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[profile.release]
+opt-level = 3
+debug = false
+rpath = false
+lto = true
+debug-assertions = false
+codegen-units = 1
+panic = 'abort'
+incremental = false
+overflow-checks = true
+
+[features]
+default = ["rand"]
+rand = []
+# for quicker tests, cargo test --lib
+# for more explicit tests, cargo test --features=backtraces
+backtraces = ["cosmwasm-std/backtraces"]
+
+[dependencies]
+cosmwasm-std = { package = "secret-cosmwasm-std", version = "1.1.10" }
+cosmwasm-storage = { package = "secret-cosmwasm-storage", version = "1.1.10" }
+secret-toolkit-storage = "0.10.1"
+secret-toolkit-serialization = "0.10.2"
+secret-toolkit-utils = "0.10.2"
+sha2 = "0.10.8"
+secret-toolkit-permit = "0.10.2"
+thiserror = "2.0.11"
+hkdf = "0.12.4"
+secret-toolkit-crypto = { version = "0.10.3", features = ["hash","hkdf", "rand"] }
+serde = { version = "1.0" }
+serde-json-wasm = "1.0.1"
+uuid = { version = "1.14", features = ["serde"] }
