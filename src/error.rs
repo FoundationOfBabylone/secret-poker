@@ -21,6 +21,10 @@ pub enum ContractError {
         game_state: Option<GameState>,
     },
 
+    #[error("Cards already retrieved by contract owner...")]
+    //This should never arise, that would mean the contract owner tried to retrieve the cards twice
+    CardsAlreadyRetrieved {},
+
     #[error("Player {player} not found in table {table_id}")]
     // issued when player is not found
     PlayerNotFound { table_id: u32, player: String },

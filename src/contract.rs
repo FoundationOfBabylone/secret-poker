@@ -460,16 +460,29 @@ mod execute_handlers {
     ) -> Result<Response, ContractError> {
         let mut table = load_table_or_error(deps.storage, table_id)?;
         
+        /*
+         * We check if the cards have already been retrieved, if so we return an error.
+         * This ensures that the logged time is the only time the cards were retrieved.
+         */
         let cards = match game_state {
             GameState::Flop => {
+                if table.community_cards.flop.retrieved_at.is_some() {
+                    return Err(ContractError::CardsAlreadyRetrieved {});
+                }
                 table.community_cards.flop.retrieved_at = Some(env.block.time);
                 Some(table.community_cards.flop.cards.clone())
             }
             GameState::Turn => {
+                if table.community_cards.turn.retrieved_at.is_some() {
+                    return Err(ContractError::CardsAlreadyRetrieved {});
+                }
                 table.community_cards.turn.retrieved_at = Some(env.block.time);
                 Some(vec![table.community_cards.turn.card.clone()])
             }
             GameState::River => {
+                if table.community_cards.river.retrieved_at.is_some() {
+                    return Err(ContractError::CardsAlreadyRetrieved {});
+                }
                 table.community_cards.river.retrieved_at = Some(env.block.time);
                 Some(vec![table.community_cards.river.card.clone()])
             }
@@ -504,6 +517,14 @@ mod execute_handlers {
     ) -> Result<Response, ContractError> {
         let mut table = load_table(deps.storage, table_id)
             .ok_or_else(|| ContractError::TableNotFound { table_id })?;
+
+        /*
+         * Ensures that the cards cannot be retrieved twice, 
+         * this ensures that the logged time is the only time the cards were retrieved.
+         */
+        if table.showdown_retrieved_at.is_some() {
+            return Err(ContractError::CardsAlreadyRetrieved {});
+        }
 
         let mut player_hands: Vec<(Uuid, Vec<Card>)> = Vec::new();
 
