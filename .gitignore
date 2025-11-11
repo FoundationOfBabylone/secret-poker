@@ -1,5 +1,6 @@
 # Build results
 /target
+/node
 Cargo.lock
 contract.wasm*
 contract.wasm.gz*

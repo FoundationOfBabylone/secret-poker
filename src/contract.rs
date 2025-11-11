@@ -59,23 +59,57 @@ mod helpers {
         Ok(shares)
     }
 
+
     pub fn shuffle_deck(deck: &mut Deck, seed: u64) {
         let mut rng = Sha256::new();
         let mut deck_len = deck.cards.len();
 
         while deck_len > 1 {
             deck_len -= 1;
-            rng.update(&seed.to_le_bytes());
-            rng.update(&(deck_len as u64).to_le_bytes());
+            
+            // The upper bound for our random index is deck_len + 1
+            // E.g., for the first swap (deck_len=51), we need an index from 0 to 51 (52 possibilities).
+            let upper_bound = deck_len + 1;
 
-            let hash = rng.finalize_reset();
-            let random_value = u64::from_le_bytes(hash[..8].try_into().unwrap());
-            let random_index = (random_value as usize) % (deck_len + 1);
+            // --- Start of adapted secure_random_index logic ---
+
+            // 1. Calculate the threshold to avoid bias. Any random value generated
+            //    above this threshold will be discarded and regenerated.
+            let threshold = (u64::MAX / upper_bound as u64) * upper_bound as u64;
+            
+            let random_index;
+            let mut attempt_counter: u64 = 0; // A nonce to get a new hash if we have to retry.
+
+            // 2. Start the rejection sampling loop.
+            loop {
+                // Update the hasher with the core seed, the current deck length,
+                // and the attempt counter. The counter is crucial to ensure we get a
+                // new random number if the first one is biased.
+                rng.update(&seed.to_le_bytes());
+                rng.update(&(deck_len as u64).to_le_bytes());
+                rng.update(&attempt_counter.to_le_bytes());
+
+                let hash = rng.finalize_reset();
+                let random_value = u64::from_le_bytes(hash[..8].try_into().unwrap());
+                
+                // 3. If the value is below the threshold, it's unbiased.
+                if random_value < threshold {
+                    // We can now safely use the modulo operator.
+                    random_index = (random_value as usize) % upper_bound;
+                    break; // Exit the rejection sampling loop.
+                }
+
+                // 4. Otherwise, the value is in the biased range. Increment the counter
+                //    and try again.
+                attempt_counter += 1;
+            }
+            // --- End of adapted logic ---
 
             deck.cards.swap(deck_len, random_index);
         }
     }
 }
+
 
 
 mod state_utils {
@@ -112,7 +146,7 @@ mod query_handlers {
         match query {
             QueryWithPermit::PlayerPrivateData { table_id } => {
                 let private_data = query_player_private_data(deps, table_id, viewer)?;
-                let serialized =         match serde_json_wasm::to_string(&private_data) {
+                let serialized = match serde_json_wasm::to_string(&private_data) {
                     Ok(json) => Ok(json),
                     Err(e) => Err(StdError::generic_err(e.to_string())),
                 };
@@ -604,7 +638,7 @@ fn init_counter(env: &Env) -> StdResult<u128> {
     let seed_bytes: [u8; RANDOM_SEED_SIZE] = seed[..RANDOM_SEED_SIZE]
         .try_into()
         .map_err(|_| StdError::generic_err("Failed to convert seed to array"))?;
-    Ok(u128::from_le_bytes(seed_bytes) % 1000)
+    Ok(u128::from_le_bytes(seed_bytes))
 }
 
 #[entry_point]
@@ -681,6 +715,8 @@ mod complete_tests {
     use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
     use cosmwasm_std::{coins, from_binary};
     use super::*;
+    use std::time::Instant;
+    use std::collections::HashMap;
 
     #[test]
     fn test_instantiate() {
@@ -1085,10 +1121,210 @@ mod complete_tests {
     fn test_additive_sharing() {
         let secret = 14151497078262209000u64;
     let mut counter = 0;
-    let shares = helpers::additive_secret_sharing(&mock_env(), 2, secret, &mut counter).unwrap();
+    let _shares = helpers::additive_secret_sharing(&mock_env(), 2, secret, &mut counter).unwrap();
     let shares = [8676118583430535000, 5475378494831674000, ];
          let sum = shares.iter().copied().fold(0u64, u64::wrapping_add);
          println!("{:?}", sum);
         assert_eq!(sum, secret);
+    }
+
+    #[test]
+    fn test_shuffle_performance_comparison() {
+        const ITERATIONS: usize = 10000;
+        let seed = 12345u64;
+        
+        // Test shuffle_deck
+        let mut total_duration_biased = std::time::Duration::ZERO;
+        for _ in 0..ITERATIONS {
+            let mut deck = Deck::new();
+            let start = Instant::now();
+            shuffle_deck_modulo_bias(&mut deck, seed);
+            total_duration_biased += start.elapsed();
+        }
+        let mean_biased = total_duration_biased / ITERATIONS as u32;
+        
+        // Test shuffle_deck_unbiased
+        let mut total_duration_unbiased = std::time::Duration::ZERO;
+        for _ in 0..ITERATIONS {
+            let mut deck = Deck::new();
+            let start = Instant::now();
+            helpers::shuffle_deck(&mut deck, seed);
+            total_duration_unbiased += start.elapsed();
+        }
+        let mean_unbiased = total_duration_unbiased / ITERATIONS as u32;
+        
+        println!("\n=== Shuffle Performance Comparison ===");
+        println!("Iterations: {}", ITERATIONS);
+        println!("shuffle_deck mean time: {:?}", mean_biased);
+        println!("shuffle_deck_unbiased mean time: {:?}", mean_unbiased);
+        println!("Ratio (unbiased/biased): {:.2}x", 
+            mean_unbiased.as_nanos() as f64 / mean_biased.as_nanos() as f64);
+        
+        // Verify both functions actually shuffle the deck
+        let mut deck1 = Deck::new();
+        let mut deck2 = Deck::new();
+        let original_deck = Deck::new();
+        
+        shuffle_deck_modulo_bias(&mut deck1, seed);
+        helpers::shuffle_deck(&mut deck2, seed);
+        
+        assert_ne!(deck1.cards, original_deck.cards, "shuffle_deck should shuffle the deck");
+        assert_ne!(deck2.cards, original_deck.cards, "shuffle_deck_unbiased should shuffle the deck");
+    }
+    
+    // The old shuffle_deck function with modulo bias for comparison
+    fn shuffle_deck_modulo_bias(deck: &mut Deck, seed: u64) {
+        let mut rng = Sha256::new();
+        let mut deck_len = deck.cards.len();
+
+        while deck_len > 1 {
+            deck_len -= 1;
+            rng.update(&seed.to_le_bytes());
+            rng.update(&(deck_len as u64).to_le_bytes());
+
+            let hash = rng.finalize_reset();
+            let random_value = u64::from_le_bytes(hash[..8].try_into().unwrap());
+            let random_index = (random_value as usize) % (deck_len + 1);
+
+            deck.cards.swap(deck_len, random_index);
+        }
+    }
+
+    #[test]
+    fn test_shuffle_statistical_distribution() {
+        const SHUFFLE_ITERATIONS: usize = 100000;
+        const DECK_SIZE: usize = 52;
+        const POSITIONS_TO_TEST: usize = 5; // Test first 5 positions
+        
+        // Track how many times each card appears at each position
+        let mut biased_distribution: Vec<HashMap<String, usize>> = vec![HashMap::new(); POSITIONS_TO_TEST];
+        let mut unbiased_distribution: Vec<HashMap<String, usize>> = vec![HashMap::new(); POSITIONS_TO_TEST];
+        
+        // Run shuffle_deck iterations
+        for i in 0..SHUFFLE_ITERATIONS {
+            let mut deck = Deck::new();
+            shuffle_deck_modulo_bias(&mut deck, i as u64);
+            
+            for pos in 0..POSITIONS_TO_TEST {
+                let card_str = deck.cards[pos].to_string();
+                *biased_distribution[pos].entry(card_str).or_insert(0) += 1;
+            }
+        }
+        
+        // Run shuffle_deck_unbiased iterations
+        for i in 0..SHUFFLE_ITERATIONS {
+            let mut deck = Deck::new();
+            helpers::shuffle_deck(&mut deck, i as u64);
+            
+            for pos in 0..POSITIONS_TO_TEST {
+                let card_str = deck.cards[pos].to_string();
+                *unbiased_distribution[pos].entry(card_str).or_insert(0) += 1;
+            }
+        }
+        
+        println!("\n=== Statistical Distribution Test ===");
+        println!("Shuffle iterations: {}", SHUFFLE_ITERATIONS);
+        println!("Deck size: {}", DECK_SIZE);
+        println!("Expected frequency per card per position: {:.2}", SHUFFLE_ITERATIONS as f64 / DECK_SIZE as f64);
+        
+        // Calculate Chi-squared statistic for both methods
+        let expected_frequency = SHUFFLE_ITERATIONS as f64 / DECK_SIZE as f64;
+        
+        for pos in 0..POSITIONS_TO_TEST {
+            let chi_squared_biased = calculate_chi_squared(&biased_distribution[pos], expected_frequency, DECK_SIZE);
+            let chi_squared_unbiased = calculate_chi_squared(&unbiased_distribution[pos], expected_frequency, DECK_SIZE);
+            
+            println!("\nPosition {}:", pos);
+            println!("  shuffle_deck_modulo_bias χ²: {:.2}", chi_squared_biased);
+            println!("  shuffle_deck_unbiased χ²: {:.2}", chi_squared_unbiased);
+            
+            // Chi-squared critical value for 51 degrees of freedom (52 cards - 1) at 95% confidence: ~68.67
+            // At 99% confidence: ~77.38, see: https://www.medcalc.org/en/manual/chi-square-table.php
+            let critical_value_95 = 68.67;
+            let critical_value_99 = 77.38;
+            
+            println!("  Critical value (95%): {:.2}", critical_value_95);
+            println!("  Critical value (99%): {:.2}", critical_value_99);
+            
+            // Both should pass the randomness test (lower χ² is better, but should be below critical value)
+            assert!(chi_squared_unbiased < critical_value_99, 
+                "Unbiased shuffle failed randomness test at position {}: χ² = {:.2}", pos, chi_squared_unbiased);
+        }
+        
+        // Compare uniformity using coefficient of variation
+        println!("\n=== Uniformity Analysis ===");
+        for pos in 0..POSITIONS_TO_TEST {
+            let cv_biased = calculate_coefficient_of_variation(&biased_distribution[pos], expected_frequency);
+            let cv_unbiased = calculate_coefficient_of_variation(&unbiased_distribution[pos], expected_frequency);
+            
+            println!("Position {} - Coefficient of Variation:", pos);
+            println!("  shuffle_deck: {:.4}", cv_biased);
+            println!("  shuffle_deck_unbiased: {:.4}", cv_unbiased);
+            
+            // Lower CV indicates more uniform distribution
+            // Both should have low CV (typically < 0.15 for good randomness)
+            assert!(cv_unbiased < 0.2, "Unbiased shuffle has poor uniformity at position {}: CV = {:.4}", pos, cv_unbiased);
+        }
+        
+        // Verify all 52 cards appear in the distribution
+        for pos in 0..POSITIONS_TO_TEST {
+            assert_eq!(biased_distribution[pos].len(), DECK_SIZE, 
+                "shuffle_deck: Not all cards appeared at position {}", pos);
+            assert_eq!(unbiased_distribution[pos].len(), DECK_SIZE, 
+                "shuffle_deck_unbiased: Not all cards appeared at position {}", pos);
+        }
+        
+        println!("\n✓ Both shuffle methods pass statistical randomness tests");
+    }
+    
+    fn calculate_chi_squared(distribution: &HashMap<String, usize>, expected: f64, total_cards: usize) -> f64 {
+        let mut chi_squared = 0.0;
+        
+        // Include all possible cards, even those with 0 occurrences
+        let mut all_cards = HashSet::new();
+        for card in distribution.keys() {
+            all_cards.insert(card.clone());
+        }
+        
+        // Add missing cards with 0 count
+        for card in distribution.keys() {
+            all_cards.insert(card.clone());
+        }
+        
+        // Ensure we account for all 52 cards
+        for card in all_cards.iter() {
+            let observed = *distribution.get(card).unwrap_or(&0) as f64;
+            let diff = observed - expected;
+            chi_squared += (diff * diff) / expected;
+        }
+        
+        // For cards that never appeared
+        let cards_present = distribution.len();
+        if cards_present < total_cards {
+            let missing_cards = total_cards - cards_present;
+            chi_squared += missing_cards as f64 * expected; // (0 - expected)² / expected = expected
+        }
+        
+        chi_squared
+    }
+    
+    fn calculate_coefficient_of_variation(distribution: &HashMap<String, usize>, expected: f64) -> f64 {
+        let n = distribution.len() as f64;
+        if n == 0.0 {
+            return 0.0;
+        }
+        
+        // Calculate standard deviation
+        let variance: f64 = distribution.values()
+            .map(|&count| {
+                let diff = count as f64 - expected;
+                diff * diff
+            })
+            .sum::<f64>() / n;
+        
+        let std_dev = variance.sqrt();
+        
+        // Coefficient of variation = std_dev / mean
+        std_dev / expected
     }
 }
