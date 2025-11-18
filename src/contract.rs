@@ -60,6 +60,56 @@ mod helpers {
     }
 
 
+    /*
+        Shuffle the deck using a seed-based random number generator.
+
+        This function implements the modern implementation of the Fisher-Yates shuffle algorithm with rejection sampling
+        to ensure uniform distribution of the shuffled deck.
+        
+        See : https://en.wikipedia.org/wiki/Fisher%E2%80%93Yates_shuffle for more details.
+
+        When using a random number generator to produce numbers within a specific range,
+        simply taking the modulus of a larger random number can introduce bias if the range
+        does not evenly divide the range of the random number generator.
+        This bias occurs because some numbers in the desired range will be favored more than others.
+
+        Example:
+
+        If you want a random number between 0 and 3 (inclusive) using a random
+        number generator that produces numbers from 0 to 5, taking the modulus 6 of
+        the generated numbers would yield:
+            - 0 % 4 = 0
+            - 1 % 4 = 1
+            - 2 % 4 = 2
+            - 3 % 4 = 3
+            - 4 % 4 = 0
+            - 5 % 4 = 1
+
+        Here, 0 (2 occurrences) and 1 (2 occurrences) are favored more than 2 and 3 (1 occurrence each), leading to a biased distribution.
+
+        In our case the bias is infinitesimal,let's calculate it :
+        The u64 random number generator produces numbers from 0 to u64::MAX, where u64::MAX = 18'446'744'073'709'551'615.
+        and our desired range is starting from 52 decrementing to 0 by 1 (number of cards left in the deck).
+
+        For the first iteration, the upper_bound is 52.
+        The largest multiple of 52 that is less than or equal to u64::MAX is 18'446'744'073'709'551'600.
+        Thus, the threshold is 18'446'744'073'709'551'600, and the bias is:
+            
+            Bias = (u64::MAX - threshold + 1) / u64::MAX
+                 = (18'446'744'073'709'551'615 - 18'446'744'073'709'551'600 + 1) / 18'446'744'073'709'551'615
+                 = 14 / 18'446'744'073'709'551'615
+                 ≈ 7,58e-19
+
+        The upper_bound that introduces the highest bias is 43, with largest multiplier being 18'446'744'073'709'551'575
+        The bias is still infinitesimal with :
+
+                 = (18'446'744'073'709'551'615 - 18'446'744'073'709'551'575 + 1) / 18'446'744'073'709'551'615
+                 = 39 / 18'446'744'073'709'551'615
+                 ≈ 2,11e-18
+
+        Even so, we implement the rejection sampling method to ensure uniform distribution, 
+        it simply works by discarding any random number that falls within the biased range.
+         */
     pub fn shuffle_deck(deck: &mut Deck, seed: u64) {
         let mut rng = Sha256::new();
         let mut deck_len = deck.cards.len();
@@ -67,24 +117,14 @@ mod helpers {
         while deck_len > 1 {
             deck_len -= 1;
             
-            // The upper bound for our random index is deck_len + 1
-            // E.g., for the first swap (deck_len=51), we need an index from 0 to 51 (52 possibilities).
             let upper_bound = deck_len + 1;
 
-            // --- Start of adapted secure_random_index logic ---
-
-            // 1. Calculate the threshold to avoid bias. Any random value generated
-            //    above this threshold will be discarded and regenerated.
             let threshold = (u64::MAX / upper_bound as u64) * upper_bound as u64;
             
             let random_index;
-            let mut attempt_counter: u64 = 0; // A nonce to get a new hash if we have to retry.
+            let mut attempt_counter: u64 = 0;
 
-            // 2. Start the rejection sampling loop.
             loop {
-                // Update the hasher with the core seed, the current deck length,
-                // and the attempt counter. The counter is crucial to ensure we get a
-                // new random number if the first one is biased.
                 rng.update(&seed.to_le_bytes());
                 rng.update(&(deck_len as u64).to_le_bytes());
                 rng.update(&attempt_counter.to_le_bytes());
@@ -92,18 +132,13 @@ mod helpers {
                 let hash = rng.finalize_reset();
                 let random_value = u64::from_le_bytes(hash[..8].try_into().unwrap());
                 
-                // 3. If the value is below the threshold, it's unbiased.
                 if random_value < threshold {
-                    // We can now safely use the modulo operator.
                     random_index = (random_value as usize) % upper_bound;
-                    break; // Exit the rejection sampling loop.
+                    break;
                 }
 
-                // 4. Otherwise, the value is in the biased range. Increment the counter
-                //    and try again.
                 attempt_counter += 1;
             }
-            // --- End of adapted logic ---
 
             deck.cards.swap(deck_len, random_index);
         }
@@ -1187,6 +1222,22 @@ mod complete_tests {
             let random_index = (random_value as usize) % (deck_len + 1);
 
             deck.cards.swap(deck_len, random_index);
+        }
+    }
+
+    #[test]
+    fn test_threshold_calculation(){
+        let deck = Deck::new();
+        let mut deck_len = deck.cards.len();
+
+        while deck_len > 1 {
+            deck_len -= 1;
+            
+            let upper_bound = deck_len + 1;
+
+            let threshold = (u64::MAX / upper_bound as u64) * upper_bound as u64;
+            println!("Upper bound {}: {}", upper_bound, threshold);
+
         }
     }
 
